@@ -27,14 +27,14 @@ python3 rpow.py mine --count 10
 1. Open https://rpow2.com in browser
 2. Login to your account
 3. Open **DevTools** (F12) → **Application** → **Cookies** → `rpow2.com`
-4. Copy all cookies as string: `key1=val1; key2=val2; ...`
+4. Copy the `rpow_session` cookie value
 5. Paste into CLI
 
 ```cmd
-python rpow.py cookie set "session=abc123; other=value"
+python rpow.py cookie set "rpow_session=eyJhbGciOi..."
 ```
 
-Or export from browser console:
+Or copy from browser console:
 ```js
 document.cookie
 ```
