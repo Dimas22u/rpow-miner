@@ -5,21 +5,38 @@ Fast RPOW2 miner with **Rust native SHA-256** engine + **Python CLI** orchestrat
 ## ⚡ Quick Start (Windows)
 
 ```cmd
-git clone https://github.com/comlat12/rpow-miner.git
+git clone https://github.com/Dimas22u/rpow-miner.git
 cd rpow-miner
 pip install requests
-python rpow.py login your@email.com
+python rpow.py cookie set "your_cookie_string_here"
 python rpow.py mine --count 10
 ```
 
 ## ⚡ Quick Start (Linux/macOS)
 
 ```bash
-git clone https://github.com/comlat12/rpow-miner.git
+git clone https://github.com/Dimas22u/rpow-miner.git
 cd rpow-miner
 pip3 install requests
-python3 rpow.py login your@email.com
+python3 rpow.py cookie set "your_cookie_string_here"
 python3 rpow.py mine --count 10
+```
+
+## 🔑 How to Get Cookie
+
+1. Open https://rpow2.com in browser
+2. Login to your account
+3. Open **DevTools** (F12) → **Application** → **Cookies** → `rpow2.com`
+4. Copy all cookies as string: `key1=val1; key2=val2; ...`
+5. Paste into CLI
+
+```cmd
+python rpow.py cookie set "session=abc123; other=value"
+```
+
+Or export from browser console:
+```js
+document.cookie
 ```
 
 ## Requirements
@@ -30,7 +47,7 @@ python3 rpow.py mine --count 10
 ## Download Pre-built Binaries
 
 ```cmd
-git clone https://github.com/comlat12/rpow-miner.git
+git clone https://github.com/Dimas22u/rpow-miner.git
 cd rpow-miner
 pip install requests
 ```
@@ -40,16 +57,24 @@ That's it! Binary for your platform is auto-detected from `bin/`.
 ## Commands
 
 ```bash
-python rpow.py login <email>          # Login via magic link
-python rpow.py mine                   # Mine 1 token
-python rpow.py mine --count 10        # Mine 10 tokens
-python rpow.py mine --workers 8       # Use 8 CPU threads
-python rpow.py mine --backend python  # Use Python fallback (slower)
-python rpow.py status                 # Account + ledger
-python rpow.py activity               # Recent activity
-python rpow.py send <email> <amount>  # Send RPOW
-python rpow.py ledger                 # Public ledger
-python rpow.py logout                 # Clear session
+# Cookie management (recommended)
+python rpow.py cookie set <cookie_string>   # Set session cookie from browser
+python rpow.py cookie export                 # Show current cookies
+python rpow.py cookie clear                  # Clear saved cookies
+
+# Mining
+python rpow.py mine                          # Mine 1 token
+python rpow.py mine --count 10               # Mine 10 tokens
+python rpow.py mine --workers 8              # Use 8 CPU threads
+python rpow.py mine --backend python         # Use Python fallback (slower)
+
+# Account
+python rpow.py login <email>                 # Login via magic link (alternative)
+python rpow.py status                        # Account + ledger
+python rpow.py activity                      # Recent activity
+python rpow.py send <email> <amount>         # Send RPOW
+python rpow.py ledger                        # Public ledger
+python rpow.py logout                        # Clear session
 ```
 
 ## Build from Source

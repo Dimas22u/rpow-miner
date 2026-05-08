@@ -3,7 +3,10 @@
 RPOW2 Miner CLI — Python orchestrator + Rust native miner.
 
 Usage:
-  python rpow.py login <email>
+  python rpow.py cookie set <cookie_string>   # Set session cookie from browser
+  python rpow.py cookie export                 # Show current cookies
+  python rpow.py cookie clear                  # Clear saved cookies
+  python rpow.py login <email>                 # Login via magic link (alternative)
   python rpow.py mine [--workers N] [--count N]
   python rpow.py status
   python rpow.py activity
@@ -525,6 +528,66 @@ def cmd_logout():
     print("[✓] Logged out.")
 
 
+def parse_cookie_string(raw: str) -> dict:
+    """Parse browser cookie string 'key1=val1; key2=val2' → dict."""
+    cookies = {}
+    raw = raw.strip().strip("\"'")
+    for pair in raw.split(";"):
+        pair = pair.strip()
+        if "=" in pair:
+            k, v = pair.split("=", 1)
+            cookies[k.strip()] = v.strip()
+    return cookies
+
+
+def cmd_cookie_set(raw: str):
+    """Set session cookies from browser DevTools string."""
+    cookies = parse_cookie_string(raw)
+    if not cookies:
+        print("[!] No valid cookies found. Format: key1=val1; key2=val2")
+        return
+    state = {"cookies": cookies}
+    save_session(state)
+    print(f"[✓] Saved {len(cookies)} cookie(s):")
+    for k, v in cookies.items():
+        display = v[:40] + "..." if len(v) > 40 else v
+        print(f"    {k} = {display}")
+    # Verify
+    try:
+        me = api_me(state)
+        if me and me.get("email"):
+            print(f"\n[✓] Verified: logged in as {me['email']} | balance={me.get('balance', 0)} RPOW")
+        else:
+            print("\n[!] Cookies saved but api.me() returned no user info — may be invalid")
+    except ApiError as e:
+        if e.status == 401:
+            print(f"\n[!] Cookies saved but auth failed (401) — cookies may be expired")
+        else:
+            print(f"\n[!] Cookies saved but verification failed: {e}")
+
+
+def cmd_cookie_export():
+    """Show current saved cookies."""
+    state = load_session()
+    cookies = state.get("cookies", {})
+    if not cookies:
+        print("[i] No cookies saved. Use: python rpow.py cookie set <cookie_string>")
+        return
+    print(f"[i] {len(cookies)} cookie(s) saved:")
+    for k, v in cookies.items():
+        display = v[:40] + "..." if len(v) > 40 else v
+        print(f"    {k} = {display}")
+    # Also show as copyable string
+    cookie_str = "; ".join(f"{k}={v}" for k, v in cookies.items())
+    print(f"\n[copy] {cookie_str}")
+
+
+def cmd_cookie_clear():
+    """Clear saved cookies."""
+    clear_session()
+    print("[✓] Cookies cleared.")
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 def main():
     print("+======================================================================+")
@@ -538,6 +601,10 @@ def main():
     sub.add_parser("run", help="Login if needed, then mine")
     p_login = sub.add_parser("login", help="Login via magic link")
     p_login.add_argument("email", nargs="?")
+
+    p_cookie = sub.add_parser("cookie", help="Manage session cookies")
+    p_cookie.add_argument("action", choices=["set", "export", "clear"], help="Cookie action")
+    p_cookie.add_argument("value", nargs="?", help="Cookie string (for 'set')")
 
     p_mine = sub.add_parser("mine", help="Mine tokens")
     p_mine.add_argument("--workers", type=int, default=0)
@@ -561,6 +628,22 @@ def main():
         if cmd == "login":
             email = args.email or input("Email: ").strip()
             cmd_login(email)
+        elif cmd == "cookie":
+            if args.action == "set":
+                if args.value:
+                    cmd_cookie_set(args.value)
+                else:
+                    print("[i] Copy cookie from browser DevTools → Application → Cookies")
+                    print("    Format: key1=val1; key2=val2")
+                    raw = input("\nPaste cookie string: ").strip()
+                    if raw:
+                        cmd_cookie_set(raw)
+                    else:
+                        print("[!] No cookie provided.")
+            elif args.action == "export":
+                cmd_cookie_export()
+            elif args.action == "clear":
+                cmd_cookie_clear()
         elif cmd == "mine":
             cmd_mine(args.workers, args.count, args.backend)
         elif cmd == "status":
@@ -576,8 +659,10 @@ def main():
         elif cmd == "run":
             state = load_session()
             if not state.get("cookies"):
-                email = input("Email: ").strip()
-                cmd_login(email)
+                print("[i] No session found. Set cookie first:")
+                print("    python rpow.py cookie set <cookie_string>")
+                print("    Or login: python rpow.py login <email>")
+                return
             cmd_mine()
     except KeyboardInterrupt:
         print("\n[!] Stopped.")
