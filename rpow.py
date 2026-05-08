@@ -133,7 +133,7 @@ def api_auth_request(email, state):
 
 
 def api_follow_magic_link(raw_url, state):
-    current = raw_url.strip().strip("\"'<>\s")
+    current = raw_url.strip().strip("\"'<>" + " \t\n\r")
     api_host = API_BASE.split("//")[1]
     for _ in range(10):
         if api_host not in current:
@@ -361,10 +361,10 @@ def cmd_login(email):
         print("[!] Verification failed.")
 
 
-def cmd_mine(workers=0, count=1, backend="auto"):
+def cmd_mine(workers=0, count=0, backend="auto"):
     state = load_session()
     if not state.get("cookies"):
-        print("[!] Not logged in. Run: python rpow.py login <email>")
+        print("[!] Not logged in. Run: python rpow.py cookie set <cookie_string>")
         return
 
     try:
@@ -377,13 +377,14 @@ def cmd_mine(workers=0, count=1, backend="auto"):
         print(f"[!] api.me() failed: {e} — will retry during mining")
 
     backend_label = "Rust native" if (backend == "auto" and NATIVE_BIN) or backend == "native" else "Python"
-    print(f"[*] Mining {count} token(s) | engine={backend_label} | workers={workers or 'auto'}\n")
+    count_label = "∞ (Ctrl+C to stop)" if count == 0 else count
+    print(f"[*] Mining {count_label} token(s) | engine={backend_label} | workers={workers or 'auto'}\n")
 
     mined = 0
     total_hashes = 0
     session_start = time.time()
 
-    while mined < count:
+    while count == 0 or mined < count:
         try:
             challenge = api_challenge(state)
         except ApiError as e:
@@ -608,7 +609,7 @@ def main():
 
     p_mine = sub.add_parser("mine", help="Mine tokens")
     p_mine.add_argument("--workers", type=int, default=0)
-    p_mine.add_argument("--count", type=int, default=1)
+    p_mine.add_argument("--count", type=int, default=0, help="Number of tokens to mine (0=infinite)")
     p_mine.add_argument("--backend", choices=["auto", "native", "python"], default="auto")
 
     sub.add_parser("status", help="Account info + ledger")
