@@ -1,0 +1,7 @@
+.session.json
+__pycache__/
+*.pyc
+target/
+*.exe
+!bin/*.exe
+.DS_Store
