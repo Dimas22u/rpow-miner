@@ -5,6 +5,9 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -32,49 +35,57 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Rename binary
+      - name: Prepare binary
         shell: bash
         run: |
+          mkdir -p release/
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            cp target/${{ matrix.target }}/release/rpow-miner.exe bin/${{ matrix.artifact }}
+            cp target/${{ matrix.target }}/release/rpow-miner.exe release/${{ matrix.artifact }}
           else
-            cp target/${{ matrix.target }}/release/rpow-miner bin/${{ matrix.artifact }}
-            chmod +x bin/${{ matrix.artifact }}
+            cp target/${{ matrix.target }}/release/rpow-miner release/${{ matrix.artifact }}
+            chmod +x release/${{ matrix.artifact }}
           fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: bin/${{ matrix.artifact }}
+          path: release/${{ matrix.artifact }}
+          if-no-files-found: error
 
   release:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download all artifacts
+      - name: Download linux binary
         uses: actions/download-artifact@v4
         with:
-          path: bin/
+          name: rpow-miner-linux-x64
+          path: dist/
 
-      - name: Move binaries
-        run: |
-          mkdir -p bin/
-          mv bin/rpow-miner-linux-x64/rpow-miner-linux-x64 bin/
-          mv bin/rpow-miner-windows-x64.exe/rpow-miner-windows-x64.exe bin/
-          mv bin/rpow-miner-macos-arm64/rpow-miner-macos-arm64 bin/
-          chmod +x bin/rpow-miner-*
+      - name: Download windows binary
+        uses: actions/download-artifact@v4
+        with:
+          name: rpow-miner-windows-x64.exe
+          path: dist/
+
+      - name: Download macos binary
+        uses: actions/download-artifact@v4
+        with:
+          name: rpow-miner-macos-arm64
+          path: dist/
+
+      - name: List files
+        run: ls -lhR dist/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            bin/rpow-miner-linux-x64
-            bin/rpow-miner-windows-x64.exe
-            bin/rpow-miner-macos-arm64
+            dist/rpow-miner-linux-x64
+            dist/rpow-miner-windows-x64.exe
+            dist/rpow-miner-macos-arm64
           generate_release_notes: true
